@@ -1,0 +1,66 @@
+---
+title: Overall Project Flowchart
+---
+
+flowchart TB
+  %% nodes
+    Ph1_A["Explore Data Exploitation Demands"]
+    Ph1_B["Design Data Schema"]
+    Ph1_C["Design ER diagram"]
+    Ph1_D["Scripting"]
+    Ph1_E["Generate **Massive Data**"]
+    
+    Ph3_A["""Setup Database 
+    for quickly testing"""]
+    Ph3_B["Setup **AWS Redshift**"]
+    Ph3_C["""Ingest Data 
+    into AWS Redshift"""]
+    Ph3_D["Test Redshift Queries"]
+
+    Ph2_A("Simple Dashboard FE")
+    Ph2_B("Local BE")
+    Ph2_C["Request Data from Redshift"]
+
+    Ph4_A["Setup **Grafana**"]
+    Ph4_C["Design Dashboards"]
+    Ph4_D["Deploy Dashboards"]
+    Ph4_E["Monitor Queries Performance"]
+    Ph4_F["Visualize Data Insights"]
+
+  %% edges
+    subgraph Ph4 ["Ph4: DATA VISUALIZATION"]
+      direction TB
+      Ph4_A --> Ph4_C
+      Ph4_C --> Ph4_D
+      Ph4_D --> Ph4_E
+      Ph4_E --> Ph4_F
+    end
+
+    subgraph Ph2 ["Ph2: DASHBOARD IMPLEMENTATION"]
+      direction TB
+      Ph2_A -- Locally connect to --- Ph2_B
+      Ph2_A -- Call local API --> Ph2_B
+      Ph2_B --> Ph2_C
+    end
+
+    subgraph Ph3 ["Ph3: DATA WAREHOUSE"]
+      direction TB
+      Ph3_A --> Ph3_B
+      Ph3_B --> Ph3_C
+      Ph3_C --> Ph3_D
+    end
+
+    subgraph Ph1 ["Ph1: DATA PREPARATION"]
+      direction TB
+      Ph1_A --> Ph1_B
+      Ph1_B --> Ph1_C
+      Ph1_C --> Ph1_D
+      Ph1_D --> Ph1_E
+    end
+
+    Ph2_B -- Connect to Redshift --> Ph3
+    Ph4_A -- Connect to Redshift --> Ph3
+    Ph1_E -- Export & COPY --> Ph3_C
+    Ph1_A -- Queries design --> Ph2
+    
+    

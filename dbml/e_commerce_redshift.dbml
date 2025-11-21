@@ -1,0 +1,500 @@
+Project ecommerce_simulator_redshift {
+  database_type: 'AWS Redshift'
+  Note: '''
+  E-commerce simulator schema
+  '''
+}
+
+// ============================================================================
+// ENUMS (PostgreSQL-compatible for Redshift)
+// ============================================================================
+
+enum status {
+  active
+  inactive
+  deleted
+}
+
+enum order_status {
+  draft [note: 'Cart created but not submitted']
+  inprogress [note: 'Payment captured, seller preparing']
+  pending [note: 'Payment issue or seller delay']
+  shipped [note: 'In transit to customer']
+  delivered [note: 'Customer received package']
+  done [note: 'Completed with review window closed']
+  cancelled [note: 'Customer cancelled']
+  abandoned [note: 'Admin rejected or fraud']
+}
+
+enum trans_status {
+  draft [note: 'Transaction initiated']
+  authorized [note: 'Payment authorized but not captured']
+  captured [note: 'Payment successfully captured']
+  failed [note: 'Payment failed']
+  refunded [note: 'Payment refunded']
+  cancelled [note: 'Transaction cancelled']
+}
+
+enum gender {
+  male
+  female
+  "prefer not to say"
+  undefined
+}
+
+enum seller_type {
+  vendor [note: 'Third-party seller']
+  authorized [note: 'Official brand store']
+}
+
+enum commodity_status {
+  available [note: 'In stock and for sale']
+  unavailable [note: 'Temporarily unavailable']
+  "out of stock" [note: 'Need restock']
+  discontinued [note: 'No longer sold']
+}
+
+enum review_status {
+  draft [note: 'Customer writing review']
+  published [note: 'Visible to public']
+  deleted [note: 'Removed by admin or user']
+  flagged [note: 'Reported for review']
+}
+
+enum card_provider {
+  visa
+  mastercard
+  jcb
+  diners
+  american_express
+  discover
+  unionpay
+}
+
+enum card_status {
+  active [note: 'Card ready to use']
+  inactive [note: 'Deactivated by user']
+  expired [note: 'Past expiration date']
+  anomaly [note: 'Suspicious activity detected']
+  fraud [note: 'Confirmed fraud']
+}
+
+enum payment_method {
+  card [note: 'Credit/debit card']
+  cod [note: 'Cash on delivery']
+  apple_pay
+  g_pay
+  s_pay
+  paypal
+  bank_transfer
+}
+
+// ============================================================================
+// DIMENSION TABLES
+// ============================================================================
+
+// Users base table (SMALL - DISTSTYLE ALL)
+Table users {
+  id uuid [pk, default: `gen_random_uuid()`]
+  username varchar(255) [not null, unique]
+  phone varchar(15) [not null, unique]
+  name varchar(100) [not null]
+  email varchar(255) [not null, unique]
+  status status [default: 'active']
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+  
+  Note: 'Base user table - both consumers and sellers. DISTSTYLE ALL in Redshift.'
+  
+  indexes {
+    username
+    email
+    phone
+    status
+    created_at
+  }
+}
+
+// Consumers dimension (SMALL - DISTSTYLE ALL)
+Table consumers {
+  id uuid [pk]
+  birthday date
+  gender gender [default: 'undefined']
+  total_orders integer [default: 0, note: 'Denormalized - derived data - updated via trigger']
+  total_spent decimal(12,2) [default: 0.00, note: 'Lifetime value']
+  customer_segment varchar(20) [note: 'VIP, Regular, Occasional, One-time']
+  
+  Note: 'Consumer profile with aggregated metrics for fast lookup'
+  
+  indexes {
+    birthday
+    customer_segment
+    total_spent
+  }
+}
+
+// Sellers dimension (SMALL - DISTSTYLE ALL)
+Table sellers {
+  id uuid [pk]
+  type seller_type [not null, default: 'vendor']
+  introduction text
+  address varchar(255)
+  city varchar(50)
+  province varchar(50)
+  country varchar(30) [not null, default: 'USA']
+  rating_avg decimal(3,2) [note: 'Denormalized average rating']
+  total_sales decimal(14,2) [default: 0.00, note: 'Lifetime sales']
+  total_orders integer [default: 0]
+  
+  Note: 'Seller profile with performance metrics'
+  
+  indexes {
+    type
+    country
+    city
+    rating_avg
+    total_sales
+  }
+}
+
+// Verticals (categories) - SMALL lookup table
+Table verticals {
+  id uuid [pk, default: `gen_random_uuid()`]
+  name varchar(100) [unique, not null]
+  description text
+  status status [not null, default: 'active']
+  
+  Note: 'Product categories. DISTSTYLE ALL for fast joins.'
+  
+  indexes {
+    name
+    status
+  }
+}
+
+// Seller-Vertical junction (M:N)
+Table seller_vertical {
+  seller_id uuid [pk]
+  vertical_id uuid [pk]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+  
+  Note: 'Which verticals each seller operates in'
+}
+
+// Address book for consumers
+Table address_books {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [not null]
+  address_line_1 varchar(100) [not null]
+  address_line_2 varchar(100)
+  city varchar(50) [not null]
+  province varchar(50) [not null]
+  country varchar(30) [not null]
+  postal_code varchar(10)
+  phone varchar(15) [not null]
+  receiver_name varchar(100) [not null]
+  is_default boolean [default: false]
+  latitude decimal(10,7) [note: 'For geographic analysis']
+  longitude decimal(10,7) [note: 'For geographic analysis']
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+  
+  Note: 'Customer saved addresses. DISTKEY user_id.'
+  
+  indexes {
+    user_id
+    (city, country)
+    country
+    is_default
+  }
+}
+
+// Commodities (products)
+Table commodities {
+  id uuid [pk, default: `gen_random_uuid()`]
+  seller_id uuid [not null]
+  sku varchar(50) [unique, not null, note: 'Stock keeping unit']
+  name varchar(255) [not null]
+  price decimal(10,2) [default: 0.00, not null, note: 'Selling price in USD']
+  cost_price decimal(10,2) [note: 'Cost for margin analysis']
+  quantity integer [not null, default: 0, note: 'Available stock']
+  reserved_quantity integer [default: 0, note: 'In pending orders']
+  reorder_level integer [default: 10, note: 'Alert threshold']
+  reorder_quantity integer [default: 100, note: 'Restock amount']
+  weight_kg decimal(8,2) [note: 'For shipping calculations']
+  description text
+  technical_info text
+  guarantee_info text
+  manufacturer_name varchar(100)
+  vertical_id uuid [not null]
+  status commodity_status [default: 'available']
+  rating_avg decimal(3,2) [note: 'Denormalized average rating']
+  review_count integer [default: 0]
+  total_sold integer [default: 0, note: 'Units sold lifetime']
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+  
+  Note: 'Product catalog. DISTKEY seller_id, SORTKEY (vertical_id, created_at).'
+  
+  indexes {
+    seller_id
+    sku
+    vertical_id
+    status
+    name
+    (price)
+    rating_avg
+    total_sold
+  }
+}
+
+// Payment cards
+Table cards {
+  id uuid [pk, default: `gen_random_uuid()`]
+  consumer_id uuid [not null]
+  tk varchar(255) [not null, note: 'Encrypted token']
+  provider card_provider [not null]
+  last4 varchar(4) [not null]
+  card_holder varchar(100) [not null]
+  exp_year integer [not null, note: 'YYYY format']
+  exp_month integer [not null, note: '1-12']
+  status card_status [not null, default: 'active']
+  is_default boolean [default: false]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+  
+  Note: 'Stored payment methods. DISTKEY consumer_id.'
+  
+  indexes {
+    consumer_id
+    status
+    (exp_year, exp_month)
+    is_default
+  }
+}
+
+// ============================================================================
+// FACT TABLES (Transaction data)
+// ============================================================================
+
+// Orders fact table
+Table orders {
+  id uuid [pk, default: `gen_random_uuid()`]
+  consumer_id uuid [not null]
+  seller_id uuid [not null]
+  status order_status [default: 'draft']
+  
+  // Delivery information
+  delivery_address varchar(255) [not null]
+  delivery_postal_code varchar(10)
+  delivery_receiver varchar(100) [not null]
+  delivery_phone varchar(15) [not null]
+  delivery_city varchar(50) [not null, note: 'Denormalized for geo analysis']
+  delivery_country varchar(30) [not null, note: 'Denormalized for geo analysis']
+  delivery_latitude decimal(10,7)
+  delivery_longitude decimal(10,7)
+  
+  // Financial fields
+  subtotal_amount decimal(10,2) [not null, note: 'Sum of items before fees']
+  tax_amount decimal(10,2) [default: 0.00, note: 'Sales tax']
+  shipping_fee decimal(10,2) [default: 0.00, note: 'Delivery cost']
+  discount_amount decimal(10,2) [default: 0.00, note: 'Promotions applied']
+  total_amount decimal(10,2) [not null, note: 'Final amount to pay']
+  
+  // Timestamps for funnel analysis
+  created_at timestamp [default: `now()`, note: 'Cart created']
+  confirmed_at timestamp [note: 'Order submitted']
+  paid_at timestamp [note: 'Payment captured']
+  shipped_at timestamp [note: 'Package dispatched']
+  delivered_at timestamp [note: 'Customer received']
+  completed_at timestamp [note: 'Finalized']
+  updated_at timestamp [default: `now()`]
+  
+  // Derived metrics
+  days_to_ship integer [note: 'paid_at to shipped_at']
+  days_to_deliver integer [note: 'shipped_at to delivered_at']
+  
+  Note: '''
+  Core fact table. 
+  DISTKEY consumer_id (most joins on consumer analysis)
+  SORTKEY (created_at, status)
+  '''
+  
+  indexes {
+    consumer_id
+    seller_id
+    status
+    created_at
+    confirmed_at
+    (consumer_id, status)
+    (seller_id, status)
+    (delivery_country, delivery_city)
+  }
+}
+
+// Order line items (M:N junction with quantity)
+Table order_commodities {
+  order_id uuid [pk]
+  commodity_id uuid [pk]
+  quantity integer [not null, default: 1, note: 'Units ordered']
+  unit_price decimal(10,2) [not null, note: 'Price at time of order']
+  unit_cost decimal(10,2) [note: 'Cost at time of order for margin']
+  line_total decimal(10,2) [not null, note: 'quantity * unit_price']
+  discount_applied decimal(10,2) [default: 0.00]
+  
+  Note: '''
+  Order line items.
+  DISTKEY order_id (matches orders table)
+  Captures price at order time for historical accuracy
+  '''
+  
+  indexes {
+    order_id
+    commodity_id
+  }
+}
+
+// Transactions (payments)
+Table transactions {
+  id uuid [pk, default: `gen_random_uuid()`]
+  order_id uuid [not null]
+  card_id uuid [note: 'NULL if not card payment']
+  payment_method payment_method [not null, default: 'cod']
+  amount decimal(10,2) [not null, note: 'Transaction amount in USD']
+  status trans_status [default: 'draft']
+  
+  // Timestamps
+  created_at timestamp [default: `now()`, note: 'Transaction initiated']
+  authorized_at timestamp [note: 'Payment authorized']
+  completed_at timestamp [note: 'Payment captured/refunded']
+  
+  // Payment gateway fields
+  gateway_transaction_id varchar(100) [note: 'External payment ID']
+  gateway_response_code varchar(50)
+  gateway_response_message varchar(255)
+  
+  // Metadata
+  ip_address varchar(45) [note: 'IPv4 or IPv6']
+  user_agent varchar(255) [note: 'Browser/device info']
+  
+  Note: '''
+  Payment transactions.
+  DISTKEY order_id (matches orders)
+  SORTKEY (created_at, status)
+  Multiple transactions per order allowed (refunds, installments)
+  '''
+  
+  indexes {
+    order_id
+    card_id
+    status
+    payment_method
+    created_at
+  }
+}
+
+// Reviews
+Table reviews {
+  id uuid [pk, default: `gen_random_uuid()`]
+  order_id uuid [not null, unique, note: 'One review per order']
+  commodity_id uuid [note: 'Which product reviewed (if multi-item order)']
+  consumer_id uuid [not null, note: 'Denormalized for fast lookup']
+  seller_id uuid [not null, note: 'Denormalized for fast lookup']
+  rate integer [not null, default: 3, note: '1-5 stars']
+  comment text [note: 'Review text']
+  status review_status [not null, default: 'draft']
+  is_verified_purchase boolean [default: true]
+  helpful_count integer [default: 0, note: 'Upvotes']
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+  published_at timestamp [note: 'When made public']
+  
+  Note: '''
+  Product reviews.
+  DISTKEY order_id (matches orders)
+  SORTKEY (created_at, rate)
+  '''
+  
+  indexes {
+    order_id
+    commodity_id
+    consumer_id
+    seller_id
+    status
+    rate
+    created_at
+  }
+}
+
+// ============================================================================
+// RELATIONSHIPS
+// ============================================================================
+
+// User relationships (1:1 inheritance)
+Ref consumer_user: consumers.id - users.id [delete: cascade]
+Ref seller_user: sellers.id - users.id [delete: cascade]
+
+// Consumer relationships
+Ref consumer_address: consumers.id < address_books.user_id [delete: cascade]
+Ref consumer_card: consumers.id < cards.consumer_id [delete: cascade]
+
+// Seller relationships
+Ref seller_vertical_seller: sellers.id < seller_vertical.seller_id [delete: cascade]
+Ref seller_vertical_vertical: verticals.id < seller_vertical.vertical_id [delete: restrict]
+Ref seller_commodity: sellers.id < commodities.seller_id [delete: restrict]
+
+// Vertical relationships
+Ref vertical_commodity: verticals.id < commodities.vertical_id [delete: restrict]
+
+// Order relationships
+Ref order_consumer: orders.consumer_id > consumers.id [delete: restrict]
+Ref order_seller: orders.seller_id > sellers.id [delete: restrict]
+
+// Order line items
+Ref order_commodity_order: order_commodities.order_id > orders.id [delete: cascade]
+Ref order_commodity_commodity: order_commodities.commodity_id > commodities.id [delete: restrict]
+
+// Transaction relationships
+Ref transaction_order: transactions.order_id > orders.id [delete: cascade]
+Ref transaction_card: transactions.card_id > cards.id [delete: restrict]
+
+// Review relationships
+Ref review_order: reviews.order_id - orders.id [delete: cascade]
+Ref review_commodity: reviews.commodity_id > commodities.id [delete: restrict]
+Ref review_consumer: reviews.consumer_id > consumers.id [delete: restrict]
+Ref review_seller: reviews.seller_id > sellers.id [delete: restrict]
+
+// ============================================================================
+// NOTES ON REDSHIFT OPTIMIZATION
+// ============================================================================
+
+// Distribution Strategy:
+// - Dimension tables (users, consumers, sellers, verticals): DISTSTYLE ALL
+// - Fact tables: DISTKEY on most frequently joined column
+//   * orders: consumer_id (customer analytics)
+//   * transactions: order_id (matches orders)
+//   * order_commodities: order_id (matches orders)
+//   * reviews: order_id (matches orders)
+//   * commodities: seller_id (seller analytics)
+//   * cards: consumer_id (matches consumers)
+//   * address_books: user_id (matches consumers)
+
+// Sort Keys:
+// - orders: (created_at, status) - time-series queries
+// - transactions: (created_at, status)
+// - commodities: (vertical_id, created_at) - catalog browsing
+// - reviews: (created_at, rate) - recent reviews
+
+// Compression:
+// - UUID: RAW or LZO
+// - VARCHAR: LZO or ZSTD
+// - DECIMAL: AZ64 or ZSTD
+// - TIMESTAMP: AZ64
+// - INTEGER: AZ64
+// - Enums: BYTEDICT
+
+// Maintenance:
+// - VACUUM weekly
+// - ANALYZE after large loads
+// - Monitor query performance with SVL/STL tables

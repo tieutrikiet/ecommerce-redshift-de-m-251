@@ -1,0 +1,17 @@
+-- Drop all tables in correct order (reverse dependency order)
+DROP TABLE IF EXISTS order_transactions CASCADE;
+DROP TABLE IF EXISTS order_commodities CASCADE;
+DROP TABLE IF EXISTS commodities CASCADE;
+DROP TABLE IF EXISTS transactions CASCADE;
+DROP TABLE IF EXISTS orders CASCADE;
+DROP TABLE IF EXISTS consumers CASCADE;
+DROP TABLE IF EXISTS sellers CASCADE;
+DROP TABLE IF EXISTS manufacturers CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
+-- Drop types if they exist
+DROP TYPE IF EXISTS status CASCADE;
+DROP TYPE IF EXISTS order_status CASCADE;
+DROP TYPE IF EXISTS trans_status CASCADE;
+DROP TYPE IF EXISTS gender CASCADE;
+DROP TYPE IF EXISTS vertical CASCADE;
