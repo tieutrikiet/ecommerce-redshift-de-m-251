@@ -1,15 +1,5 @@
 -- ============================================================================
 -- REDSHIFT DATA LOADING SCRIPT
--- Copy this entire file and execute in Redshift Query Editor v2
--- ============================================================================
--- 
--- BEFORE RUNNING:
--- 1. Replace 'YOUR-BUCKET-NAME' with your actual S3 bucket name
--- 2. Replace 'YOUR-TIMESTAMP' with your CSV folder timestamp (e.g., csv_output_20251116_221628)
--- 3. Replace 'YOUR-ACCOUNT-ID' with your AWS account ID
--- 4. Ensure your IAM role name matches (default: RedshiftS3AccessRole)
--- 5. Update REGION if not using us-east-1
---
 -- ============================================================================
 
 -- Set session parameters for better error visibility
@@ -18,8 +8,9 @@ SET enable_result_cache_for_session TO OFF;
 -- ============================================================================
 -- TABLE 1: USERS (Base table - MUST load first)
 -- ============================================================================
-COPY users FROM 's3://YOUR-BUCKET-NAME/YOUR-TIMESTAMP/users.csv'
-IAM_ROLE 'arn:aws:iam::YOUR-ACCOUNT-ID:role/RedshiftS3AccessRole'
+COPY users FROM 's3://amzn-s3-url/csv_time_stamp/users.csv'
+IAM_ROLE 'arn:aws:iam::your_aws_id:role/redshift_IAM_role'
+DELIMITER '|'
 CSV
 IGNOREHEADER 1
 TIMEFORMAT 'auto'
@@ -27,73 +18,73 @@ DATEFORMAT 'auto'
 EMPTYASNULL
 BLANKSASNULL
 MAXERROR 10
-REGION 'us-east-1';
+REGION 'ap-southeast-1';
 
 -- Verify
 SELECT 'users' as table_name, COUNT(*) as row_count FROM users;
--- Expected: ~1100 rows (1000 consumers + 100 sellers)
 
 -- ============================================================================
 -- TABLE 2: CONSUMERS (Depends on users)
 -- ============================================================================
-COPY consumers FROM 's3://YOUR-BUCKET-NAME/YOUR-TIMESTAMP/consumers.csv'
-IAM_ROLE 'arn:aws:iam::YOUR-ACCOUNT-ID:role/RedshiftS3AccessRole'
+COPY consumers FROM 's3://amzn-s3-url/csv_time_stamp/consumers.csv'
+IAM_ROLE 'arn:aws:iam::your_aws_id:role/redshift_IAM_role'
+DELIMITER '|'
 CSV
 IGNOREHEADER 1
 DATEFORMAT 'auto'
 EMPTYASNULL
 BLANKSASNULL
 MAXERROR 10
-REGION 'us-east-1';
+REGION 'ap-southeast-1';
 
 -- Verify
 SELECT 'consumers' as table_name, COUNT(*) as row_count FROM consumers;
--- Expected: ~1000 rows
 
 -- ============================================================================
 -- TABLE 3: SELLERS (Depends on users)
 -- ============================================================================
-COPY sellers FROM 's3://YOUR-BUCKET-NAME/YOUR-TIMESTAMP/sellers.csv'
-IAM_ROLE 'arn:aws:iam::YOUR-ACCOUNT-ID:role/RedshiftS3AccessRole'
+COPY sellers FROM 's3://amzn-s3-url/csv_time_stamp/sellers.csv'
+IAM_ROLE 'arn:aws:iam::your_aws_id:role/redshift_IAM_role'
+DELIMITER '|'
 CSV
 IGNOREHEADER 1
 EMPTYASNULL
 BLANKSASNULL
 MAXERROR 10
-REGION 'us-east-1';
+REGION 'ap-southeast-1';
 
 -- Verify
 SELECT 'sellers' as table_name, COUNT(*) as row_count FROM sellers;
--- Expected: ~100 rows
 
 -- ============================================================================
 -- TABLE 4: VERTICALS (No dependencies)
 -- ============================================================================
-COPY verticals FROM 's3://YOUR-BUCKET-NAME/YOUR-TIMESTAMP/verticals.csv'
-IAM_ROLE 'arn:aws:iam::YOUR-ACCOUNT-ID:role/RedshiftS3AccessRole'
+COPY verticals FROM 's3://amzn-s3-url/csv_time_stamp/verticals.csv'
+IAM_ROLE 'arn:aws:iam::your_aws_id:role/redshift_IAM_role'
+DELIMITER '|'
 CSV
 IGNOREHEADER 1
 EMPTYASNULL
 BLANKSASNULL
 MAXERROR 10
-REGION 'us-east-1';
+REGION 'ap-southeast-1';
 
 -- Verify
 SELECT 'verticals' as table_name, COUNT(*) as row_count FROM verticals;
--- Expected: 39-40 rows
 
 -- ============================================================================
 -- TABLE 5: SELLER_VERTICAL (Junction table)
 -- ============================================================================
-COPY seller_vertical FROM 's3://YOUR-BUCKET-NAME/YOUR-TIMESTAMP/seller_vertical.csv'
-IAM_ROLE 'arn:aws:iam::YOUR-ACCOUNT-ID:role/RedshiftS3AccessRole'
+COPY seller_vertical FROM 's3://amzn-s3-url/csv_time_stamp/seller_vertical.csv'
+IAM_ROLE 'arn:aws:iam::your_aws_id:role/redshift_IAM_role'
+DELIMITER '|'
 CSV
 IGNOREHEADER 1
 TIMEFORMAT 'auto'
 EMPTYASNULL
 BLANKSASNULL
 MAXERROR 10
-REGION 'us-east-1';
+REGION 'ap-southeast-1';
 
 -- Verify
 SELECT 'seller_vertical' as table_name, COUNT(*) as row_count FROM seller_vertical;
@@ -101,15 +92,16 @@ SELECT 'seller_vertical' as table_name, COUNT(*) as row_count FROM seller_vertic
 -- ============================================================================
 -- TABLE 6: ADDRESS_BOOKS
 -- ============================================================================
-COPY address_books FROM 's3://YOUR-BUCKET-NAME/YOUR-TIMESTAMP/address_books.csv'
-IAM_ROLE 'arn:aws:iam::YOUR-ACCOUNT-ID:role/RedshiftS3AccessRole'
+COPY address_books FROM 's3://amzn-s3-url/csv_time_stamp/address_books.csv'
+IAM_ROLE 'arn:aws:iam::your_aws_id:role/redshift_IAM_role'
+DELIMITER '|'
 CSV
 IGNOREHEADER 1
 TIMEFORMAT 'auto'
 EMPTYASNULL
 BLANKSASNULL
 MAXERROR 10
-REGION 'us-east-1';
+REGION 'ap-southeast-1';
 
 -- Verify
 SELECT 'address_books' as table_name, COUNT(*) as row_count FROM address_books;
@@ -117,15 +109,16 @@ SELECT 'address_books' as table_name, COUNT(*) as row_count FROM address_books;
 -- ============================================================================
 -- TABLE 7: CARDS
 -- ============================================================================
-COPY cards FROM 's3://YOUR-BUCKET-NAME/YOUR-TIMESTAMP/cards.csv'
-IAM_ROLE 'arn:aws:iam::YOUR-ACCOUNT-ID:role/RedshiftS3AccessRole'
+COPY cards FROM 's3://amzn-s3-url/csv_time_stamp/cards.csv'
+IAM_ROLE 'arn:aws:iam::your_aws_id:role/redshift_IAM_role'
+DELIMITER '|'
 CSV
 IGNOREHEADER 1
 TIMEFORMAT 'auto'
 EMPTYASNULL
 BLANKSASNULL
 MAXERROR 10
-REGION 'us-east-1';
+REGION 'ap-southeast-1';
 
 -- Verify
 SELECT 'cards' as table_name, COUNT(*) as row_count FROM cards;
@@ -133,48 +126,49 @@ SELECT 'cards' as table_name, COUNT(*) as row_count FROM cards;
 -- ============================================================================
 -- TABLE 8: COMMODITIES (Products)
 -- ============================================================================
-COPY commodities FROM 's3://YOUR-BUCKET-NAME/YOUR-TIMESTAMP/commodities.csv'
-IAM_ROLE 'arn:aws:iam::YOUR-ACCOUNT-ID:role/RedshiftS3AccessRole'
+COPY commodities FROM 's3://amzn-s3-url/csv_time_stamp/commodities.csv'
+IAM_ROLE 'arn:aws:iam::your_aws_id:role/redshift_IAM_role'
+DELIMITER '|'
 CSV
 IGNOREHEADER 1
 TIMEFORMAT 'auto'
 EMPTYASNULL
 BLANKSASNULL
 MAXERROR 10
-REGION 'us-east-1';
+REGION 'ap-southeast-1';
 
 -- Verify
 SELECT 'commodities' as table_name, COUNT(*) as row_count FROM commodities;
--- Expected: ~5000 rows
 
 -- ============================================================================
 -- TABLE 9: ORDERS (Critical fact table)
 -- ============================================================================
-COPY orders FROM 's3://YOUR-BUCKET-NAME/YOUR-TIMESTAMP/orders.csv'
-IAM_ROLE 'arn:aws:iam::YOUR-ACCOUNT-ID:role/RedshiftS3AccessRole'
+COPY orders FROM 's3://amzn-s3-url/csv_time_stamp/orders.csv'
+IAM_ROLE 'arn:aws:iam::your_aws_id:role/redshift_IAM_role'
+DELIMITER '|'
 CSV
 IGNOREHEADER 1
 TIMEFORMAT 'auto'
 EMPTYASNULL
 BLANKSASNULL
 MAXERROR 10
-REGION 'us-east-1';
+REGION 'ap-southeast-1';
 
 -- Verify
 SELECT 'orders' as table_name, COUNT(*) as row_count FROM orders;
--- Expected: ~10000 rows
 
 -- ============================================================================
 -- TABLE 10: ORDER_COMMODITIES (Line items)
 -- ============================================================================
-COPY order_commodities FROM 's3://YOUR-BUCKET-NAME/YOUR-TIMESTAMP/order_commodities.csv'
-IAM_ROLE 'arn:aws:iam::YOUR-ACCOUNT-ID:role/RedshiftS3AccessRole'
+COPY order_commodities FROM 's3://amzn-s3-url/csv_time_stamp/order_commodities.csv'
+IAM_ROLE 'arn:aws:iam::your_aws_id:role/redshift_IAM_role'
+DELIMITER '|'
 CSV
 IGNOREHEADER 1
 EMPTYASNULL
 BLANKSASNULL
 MAXERROR 10
-REGION 'us-east-1';
+REGION 'ap-southeast-1';
 
 -- Verify
 SELECT 'order_commodities' as table_name, COUNT(*) as row_count FROM order_commodities;
@@ -182,15 +176,16 @@ SELECT 'order_commodities' as table_name, COUNT(*) as row_count FROM order_commo
 -- ============================================================================
 -- TABLE 11: TRANSACTIONS
 -- ============================================================================
-COPY transactions FROM 's3://YOUR-BUCKET-NAME/YOUR-TIMESTAMP/transactions.csv'
-IAM_ROLE 'arn:aws:iam::YOUR-ACCOUNT-ID:role/RedshiftS3AccessRole'
+COPY transactions FROM 's3://amzn-s3-url/csv_time_stamp/transactions.csv'
+IAM_ROLE 'arn:aws:iam::your_aws_id:role/redshift_IAM_role'
+DELIMITER '|'
 CSV
 IGNOREHEADER 1
 TIMEFORMAT 'auto'
 EMPTYASNULL
 BLANKSASNULL
 MAXERROR 10
-REGION 'us-east-1';
+REGION 'ap-southeast-1';
 
 -- Verify
 SELECT 'transactions' as table_name, COUNT(*) as row_count FROM transactions;
@@ -198,15 +193,16 @@ SELECT 'transactions' as table_name, COUNT(*) as row_count FROM transactions;
 -- ============================================================================
 -- TABLE 12: REVIEWS
 -- ============================================================================
-COPY reviews FROM 's3://YOUR-BUCKET-NAME/YOUR-TIMESTAMP/reviews.csv'
-IAM_ROLE 'arn:aws:iam::YOUR-ACCOUNT-ID:role/RedshiftS3AccessRole'
+COPY reviews FROM 's3://amzn-s3-url/csv_time_stamp/reviews.csv'
+IAM_ROLE 'arn:aws:iam::your_aws_id:role/redshift_IAM_role'
+DELIMITER '|'
 CSV
 IGNOREHEADER 1
 TIMEFORMAT 'auto'
 EMPTYASNULL
 BLANKSASNULL
 MAXERROR 10
-REGION 'us-east-1';
+REGION 'ap-southeast-1';
 
 -- Verify
 SELECT 'reviews' as table_name, COUNT(*) as row_count FROM reviews;

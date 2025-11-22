@@ -35,7 +35,7 @@ SELECT
     c.sku,
     c.name as product_name,
     v.name as vertical_name,
-    s.name as seller_name,
+    u.name as seller_name,
     c.status as product_status,
     
     -- Stock metrics
@@ -287,7 +287,6 @@ CREATE OR REPLACE VIEW v_inventory_value_by_vertical AS
 SELECT 
     v.id as vertical_id,
     v.name as vertical_name,
-    v.level as vertical_level,
     
     -- Product counts
     COUNT(DISTINCT c.id) as total_products,
@@ -315,7 +314,7 @@ SELECT
 FROM verticals v
 JOIN commodities c ON v.id = c.vertical_id
 WHERE c.status IN ('available', 'unavailable', 'out of stock')
-GROUP BY v.id, v.name, v.level
+GROUP BY v.id, v.name
 ORDER BY inventory_value_at_retail DESC;
 
 -- Expected output: 39 rows (one per vertical)

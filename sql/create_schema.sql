@@ -1,5 +1,7 @@
 -- ============================================================================
--- ENUMS
+-- This SQL script creates the database schema for PostgreSQL.
+-- If you want to look at the ER diagram, please refer to the documentation.
+-- or if you want to see the schema for Redshift, please refer to sql/redshift_schema.sql
 -- ============================================================================
 
 CREATE TYPE "status" AS ENUM (
@@ -294,7 +296,7 @@ CREATE TABLE "reviews" (
   "consumer_id" uuid NOT NULL,
   "seller_id" uuid NOT NULL,
   "rate" integer NOT NULL DEFAULT 3,
-  "comment" text,
+  "comment" varchar(500),
   "status" review_status NOT NULL DEFAULT 'draft',
   "is_verified_purchase" boolean DEFAULT true,
   "helpful_count" integer DEFAULT 0,

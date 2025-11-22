@@ -28,17 +28,14 @@ Với bối cảnh đó, các bên liên quan (trực tiếp hoặc gián tiếp
 
 Từ đó, hệ thống muốn trình bày và đưa ra một số nhu cầu liên quan đến khai thác dữ liệu, có liên quan và được sử dụng trực tiếp hoặc gián tiếp từ các bên liên quan kể trên như:
 
-| #   | Nhu cầu KTDL                                         | Mô tả |
-| --- | ---------------------------------------------------- | ----- |
-| 1   | Phân tích doanh thu YoY hoặc MoM                     | xxx   |
-| 2   | Phân tích và quản lý tồn kho                         | xxx   |
-| 3   | Phân tích hiệu suất bán hàng                         | xxx   |
-| 4   | Phân tích và báo cáo theo địa lý                     | xxx   |
-| 5   | Phân tích hành vi tiêu dùng mua sắm                  | xxx   |
-| 6   | Phân tích và gợi ý sản phẩm dựa trên hành vi mua sắm | xxx   |
-| 7   | Phân tích hành vi thanh toán                         | xxx   |
-| 8   | Phân tích đánh giá sản phẩm                          | xxx   |
-| 9   | Phân tích hiểu quả danh mục sản phẩm                 | xxx   |
+| #   | Nhu cầu KTDL                         | Mô tả |
+| --- | ------------------------------------ | ----- |
+| 1   | Phân tích doanh thu YoY hoặc MoM     | xxx   |
+| 2   | Phân tích và quản lý tồn kho         | xxx   |
+| 3   | Phân tích hiệu suất bán hàng         | xxx   |
+| 4   | Phân tích và báo cáo theo địa lý     | xxx   |
+| 5   | Phân tích đánh giá sản phẩm          | xxx   |
+| 6   | Phân tích hiểu quả danh mục sản phẩm | xxx   |
 
 ## II. Nguồn dữ liệu
 
@@ -63,6 +60,8 @@ Từ đó, hệ thống muốn trình bày và đưa ra một số nhu cầu li�
 > Bối cảnh: E-Commerce. <br>
 > Công nghệ: Data Warehouse - Amazon Redshift. <br>
 > Flowchart: [Overall Flow](../flowcharts/overall_flow.mmd)
+
+![alt text](../flowcharts/data_pipeline_project.png)
 
 ## VI. Đánh giá
 

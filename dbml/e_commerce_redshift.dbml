@@ -121,7 +121,7 @@ Table consumers {
   birthday date
   gender gender [default: 'undefined']
   total_orders integer [default: 0, note: 'Denormalized - derived data - updated via trigger']
-  total_spent decimal(12,2) [default: 0.00, note: 'Lifetime value']
+  total_spent decimal(12,4) [default: 0.0000, note: 'Lifetime value']
   customer_segment varchar(20) [note: 'VIP, Regular, Occasional, One-time']
   
   Note: 'Consumer profile with aggregated metrics for fast lookup'
@@ -137,13 +137,13 @@ Table consumers {
 Table sellers {
   id uuid [pk]
   type seller_type [not null, default: 'vendor']
-  introduction text
-  address varchar(255)
+  introduction varchar(500) [note: 'Short brand description']
+  address varchar(150)
   city varchar(50)
   province varchar(50)
-  country varchar(30) [not null, default: 'USA']
+  country varchar(60) [not null, default: 'USA']
   rating_avg decimal(3,2) [note: 'Denormalized average rating']
-  total_sales decimal(14,2) [default: 0.00, note: 'Lifetime sales']
+  total_sales decimal(14,4) [default: 0.0000, note: 'Lifetime sales']
   total_orders integer [default: 0]
   
   Note: 'Seller profile with performance metrics'
@@ -190,7 +190,7 @@ Table address_books {
   address_line_2 varchar(100)
   city varchar(50) [not null]
   province varchar(50) [not null]
-  country varchar(30) [not null]
+  country varchar(60) [not null]
   postal_code varchar(10)
   phone varchar(15) [not null]
   receiver_name varchar(100) [not null]
@@ -216,13 +216,13 @@ Table commodities {
   seller_id uuid [not null]
   sku varchar(50) [unique, not null, note: 'Stock keeping unit']
   name varchar(255) [not null]
-  price decimal(10,2) [default: 0.00, not null, note: 'Selling price in USD']
-  cost_price decimal(10,2) [note: 'Cost for margin analysis']
+  price decimal(10,4) [default: 0.0000, not null, note: 'Selling price in USD']
+  cost_price decimal(10,4) [note: 'Cost for margin analysis']
   quantity integer [not null, default: 0, note: 'Available stock']
   reserved_quantity integer [default: 0, note: 'In pending orders']
   reorder_level integer [default: 10, note: 'Alert threshold']
   reorder_quantity integer [default: 100, note: 'Restock amount']
-  weight_kg decimal(8,2) [note: 'For shipping calculations']
+  weight_kg decimal(8,4) [note: 'For shipping calculations']
   description text
   technical_info text
   guarantee_info text
@@ -291,16 +291,16 @@ Table orders {
   delivery_receiver varchar(100) [not null]
   delivery_phone varchar(15) [not null]
   delivery_city varchar(50) [not null, note: 'Denormalized for geo analysis']
-  delivery_country varchar(30) [not null, note: 'Denormalized for geo analysis']
+  delivery_country varchar(60) [not null, note: 'Denormalized for geo analysis']
   delivery_latitude decimal(10,7)
   delivery_longitude decimal(10,7)
   
   // Financial fields
-  subtotal_amount decimal(10,2) [not null, note: 'Sum of items before fees']
-  tax_amount decimal(10,2) [default: 0.00, note: 'Sales tax']
-  shipping_fee decimal(10,2) [default: 0.00, note: 'Delivery cost']
-  discount_amount decimal(10,2) [default: 0.00, note: 'Promotions applied']
-  total_amount decimal(10,2) [not null, note: 'Final amount to pay']
+  subtotal_amount decimal(10,4) [not null, note: 'Sum of items before fees']
+  tax_amount decimal(10,4) [default: 0.0000, note: 'Sales tax']
+  shipping_fee decimal(10,4) [default: 0.0000, note: 'Delivery cost']
+  discount_amount decimal(10,4) [default: 0.0000, note: 'Promotions applied']
+  total_amount decimal(10,4) [not null, note: 'Final amount to pay']
   
   // Timestamps for funnel analysis
   created_at timestamp [default: `now()`, note: 'Cart created']
@@ -338,10 +338,10 @@ Table order_commodities {
   order_id uuid [pk]
   commodity_id uuid [pk]
   quantity integer [not null, default: 1, note: 'Units ordered']
-  unit_price decimal(10,2) [not null, note: 'Price at time of order']
-  unit_cost decimal(10,2) [note: 'Cost at time of order for margin']
-  line_total decimal(10,2) [not null, note: 'quantity * unit_price']
-  discount_applied decimal(10,2) [default: 0.00]
+  unit_price decimal(10,4) [not null, note: 'Price at time of order']
+  unit_cost decimal(10,4) [note: 'Cost at time of order for margin']
+  line_total decimal(10,4) [not null, note: 'quantity * unit_price']
+  discount_applied decimal(10,4) [default: 0.0000]
   
   Note: '''
   Order line items.
@@ -361,7 +361,7 @@ Table transactions {
   order_id uuid [not null]
   card_id uuid [note: 'NULL if not card payment']
   payment_method payment_method [not null, default: 'cod']
-  amount decimal(10,2) [not null, note: 'Transaction amount in USD']
+  amount decimal(10,4) [not null, note: 'Transaction amount in USD']
   status trans_status [default: 'draft']
   
   // Timestamps
@@ -441,11 +441,14 @@ Ref consumer_card: consumers.id < cards.consumer_id [delete: cascade]
 
 // Seller relationships
 Ref seller_vertical_seller: sellers.id < seller_vertical.seller_id [delete: cascade]
-Ref seller_vertical_vertical: verticals.id < seller_vertical.vertical_id [delete: restrict]
+// NOTE: Following FK constraints removed in actual Redshift schema for data loading flexibility
+// Referential integrity enforced at application/ETL layer instead
+// Ref seller_vertical_vertical: verticals.id < seller_vertical.vertical_id [delete: restrict]
 Ref seller_commodity: sellers.id < commodities.seller_id [delete: restrict]
 
-// Vertical relationships
-Ref vertical_commodity: verticals.id < commodities.vertical_id [delete: restrict]
+// Vertical relationships  
+// NOTE: Vertical FK removed from actual schema - kept here for documentation only
+// Ref vertical_commodity: verticals.id < commodities.vertical_id [delete: restrict]
 
 // Order relationships
 Ref order_consumer: orders.consumer_id > consumers.id [delete: restrict]

@@ -29,53 +29,73 @@ FROM orders;
 -- ============================================================================
 
 CREATE OR REPLACE VIEW v_monthly_revenue AS
+WITH monthly_aggs AS (
+    SELECT 
+        DATE_TRUNC('month', o.created_at) as month,
+        
+        -- Order metrics
+        COUNT(DISTINCT o.id) as total_orders,
+        COUNT(DISTINCT CASE WHEN o.status IN ('delivered', 'done') 
+              THEN o.id END) as completed_orders,
+        COUNT(DISTINCT CASE WHEN o.status IN ('cancelled', 'abandoned') 
+              THEN o.id END) as failed_orders,
+        
+        -- Revenue metrics (only completed orders)
+        SUM(CASE WHEN o.status IN ('delivered', 'done') 
+            THEN o.total_amount ELSE 0 END) as total_revenue,
+        SUM(CASE WHEN o.status IN ('delivered', 'done') 
+            THEN o.subtotal_amount ELSE 0 END) as subtotal_revenue,
+        SUM(CASE WHEN o.status IN ('delivered', 'done') 
+            THEN o.tax_amount ELSE 0 END) as total_tax,
+        SUM(CASE WHEN o.status IN ('delivered', 'done') 
+            THEN o.shipping_fee ELSE 0 END) as total_shipping,
+        SUM(CASE WHEN o.status IN ('delivered', 'done') 
+            THEN o.discount_amount ELSE 0 END) as total_discounts,
+        
+        -- Average metrics
+        AVG(CASE WHEN o.status IN ('delivered', 'done') 
+            THEN o.total_amount END) as avg_order_value,
+        
+        -- Customer metrics
+        COUNT(DISTINCT o.consumer_id) as unique_customers,
+        COUNT(DISTINCT CASE WHEN o.status IN ('delivered', 'done') 
+              THEN o.consumer_id END) as paying_customers
+    FROM orders o
+    GROUP BY 1
+)
 SELECT 
-    DATE_TRUNC('month', o.created_at) as month,
-    EXTRACT(YEAR FROM o.created_at) as year,
-    EXTRACT(MONTH FROM o.created_at) as month_num,
-    TO_CHAR(o.created_at, 'YYYY-MM') as year_month,
-    TO_CHAR(o.created_at, 'Mon YYYY') as month_label,
+    month,
+    EXTRACT(YEAR FROM month) as year,
+    EXTRACT(MONTH FROM month) as month_num,
+    TO_CHAR(month, 'YYYY-MM') as year_month,
+    TO_CHAR(month, 'Mon YYYY') as month_label,
+    total_orders,
+    completed_orders,
+    failed_orders,
+    total_revenue,
+    subtotal_revenue,
+    total_tax,
+    total_shipping,
+    total_discounts,
+    avg_order_value,
     
-    -- Order metrics
-    COUNT(DISTINCT o.id) as total_orders,
-    COUNT(DISTINCT CASE WHEN o.status IN ('delivered', 'done') 
-          THEN o.id END) as completed_orders,
-    COUNT(DISTINCT CASE WHEN o.status IN ('cancelled', 'abandoned') 
-          THEN o.id END) as failed_orders,
-    
-    -- Revenue metrics (only completed orders)
-    SUM(CASE WHEN o.status IN ('delivered', 'done') 
-        THEN o.total_amount ELSE 0 END) as total_revenue,
-    SUM(CASE WHEN o.status IN ('delivered', 'done') 
-        THEN o.subtotal_amount ELSE 0 END) as subtotal_revenue,
-    SUM(CASE WHEN o.status IN ('delivered', 'done') 
-        THEN o.tax_amount ELSE 0 END) as total_tax,
-    SUM(CASE WHEN o.status IN ('delivered', 'done') 
-        THEN o.shipping_fee ELSE 0 END) as total_shipping,
-    SUM(CASE WHEN o.status IN ('delivered', 'done') 
-        THEN o.discount_amount ELSE 0 END) as total_discounts,
-    
-    -- Average metrics
-    AVG(CASE WHEN o.status IN ('delivered', 'done') 
-        THEN o.total_amount END) as avg_order_value,
-    PERCENTILE_CONT(0.5) WITHIN GROUP (
-        ORDER BY CASE WHEN o.status IN ('delivered', 'done') 
-        THEN o.total_amount END
+    -- Median calculation (now in a separate step)
+    (SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY total_amount) 
+     FROM orders 
+     WHERE status IN ('delivered', 'done') 
+     AND DATE_TRUNC('month', created_at) = monthly_aggs.month
     ) as median_order_value,
     
-    -- Customer metrics
-    COUNT(DISTINCT o.consumer_id) as unique_customers,
-    COUNT(DISTINCT CASE WHEN o.status IN ('delivered', 'done') 
-          THEN o.consumer_id END) as paying_customers,
+    unique_customers,
+    paying_customers,
     
     -- Conversion rate
     ROUND(
-        COUNT(DISTINCT CASE WHEN o.status IN ('delivered', 'done') THEN o.id END)::DECIMAL 
-        / NULLIF(COUNT(DISTINCT o.id), 0) * 100,
+        completed_orders::DECIMAL 
+        / NULLIF(total_orders, 0) * 100,
         2
     ) as order_completion_rate_pct
-FROM orders o
-GROUP BY 1, 2, 3, 4, 5
+FROM monthly_aggs
 ORDER BY 1 DESC;
 
 -- Expected output: One row per month with revenue KPIs
