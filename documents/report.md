@@ -213,7 +213,6 @@ Hệ thống bao gồm 13 thực thể chính được tổ chức theo các nh�
       - Denormalized consumer_id và seller_id cho fast lookup
       - Rate từ 1-5 stars, support verified purchase flag
 
-**F. Bảng hệ thống (không có trong DBML nhưng có trong Redshift):**
 
 13. **Staging tables** - Bảng tạm cho ETL process
 
