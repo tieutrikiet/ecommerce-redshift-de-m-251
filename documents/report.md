@@ -61,7 +61,7 @@ Từ đó, hệ thống muốn trình bày và đưa ra một số nhu cầu li�
 
 #### 2.1.2. Nguồn dữ liệu
 
-Dữ liệu cho dự án được **tự sinh tạo (synthetic data)** thông qua script Python (`scripts/generate_data.py`) với các thư viện hỗ trợ:
+Dữ liệu cho dự án được **tự sinh tạo (synthetic data)** với các thư viện python:
 
 - **Faker library**: Sinh dữ liệu giả lập thực tế cho tên, địa chỉ, email, số điện thoại, văn bản mô tả, v.v.
 - **Random & UUID modules**: Tạo các giá trị ngẫu nhiên, UUID cho primary keys
@@ -73,29 +73,7 @@ Dữ liệu cho dự án được **tự sinh tạo (synthetic data)** thông qu
 - Kiểm soát hoàn toàn về quy mô, phân phối và đặc tính của dữ liệu
 - Đảm bảo tuân thủ các quy định về bảo mật và quyền riêng tư (không sử dụng dữ liệu thật)
 - Khả năng tái tạo (reproducible) với seed cố định để đảm bảo tính nhất quán
-- File `scripts/verticals_master.csv` lưu trữ danh sách 146 danh mục sản phẩm (verticals) cố định
 - File này được tái sử dụng qua nhiều lần generate để đảm bảo tính nhất quán của các danh mục
-
-#### 2.1.3. Số lượng bản ghi dự kiến cho demo
-
-Dự án sử dụng quy mô dữ liệu như sau cho môi trường demo/phát triển:
-
-| Bảng                 | Số lượng bản ghi | Ghi chú                                      |
-| -------------------- | ---------------- | -------------------------------------------- |
-| **users**            | 11,000           | 10,000 consumers + 1,000 sellers             |
-| **consumers**        | 10,000           | Hồ sơ người mua hàng                         |
-| **sellers**          | 1,000            | Hồ sơ người bán hàng                         |
-| **verticals**        | 146              | Danh mục sản phẩm cố định                    |
-| **seller_vertical**  | ~3,000           | Trung bình mỗi seller có 3 verticals         |
-| **address_books**    | 15,000-30,000    | Mỗi consumer có 1-3 địa chỉ                  |
-| **commodities**      | 50,000           | Sản phẩm trong catalog                       |
-| **cards**            | 15,000-30,000    | Mỗi consumer có 1-3 thẻ thanh toán           |
-| **orders**           | 100,000          | Đơn hàng (bao gồm các trạng thái khác nhau)  |
-| **order_commodities**| 150,000-500,000  | Chi tiết đơn hàng (1-5 items mỗi order)      |
-| **transactions**     | ~70,000          | Giao dịch thanh toán (không phải tất cả đơn) |
-| **reviews**          | ~21,000          | Đánh giá (30% đơn hàng delivered/done)       |
-
-**Tổng số bản ghi:** ~400,000 - 700,000 bản ghi
 
 ---
 
@@ -114,7 +92,7 @@ Bộ dữ liệu được thiết kế theo mô hình **Star Schema** (biến th
 
 2. **Fact Tables (Bảng sự kiện):**
    - `orders`: Đơn hàng - fact table trung tâm
-   - `order_commodities`: Chi tiết đơn hàng
+   - `order_commodities`: Sản phẩm trong đơn hàng
    - `transactions`: Giao dịch thanh toán
    - `reviews`: Đánh giá sản phẩm
 
@@ -696,7 +674,7 @@ Phụ thuộc vào thực thể khác, khóa chính bao gồm khóa ngoại:
   - **Existence dependency:** Phải có cả seller và vertical
   - **Identifying relationship:** M:N relationship
 
-- **order_commodities** - Chi tiết đơn hàng
+- **order_commodities** - Sản phẩm trong đơn hàng
   - PK: (`order_id`, `commodity_id`) - Composite key gồm 2 FK
   - **Phụ thuộc:** orders và commodities
   - **Existence dependency:** Phải có order
