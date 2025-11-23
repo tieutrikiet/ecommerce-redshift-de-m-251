@@ -512,7 +512,7 @@ def generate_commodities(sellers: List[Dict], verticals: List[Dict], seller_vert
             'rating_avg': format_rating(Decimal('0')),
             'review_count': 0,
             'total_sold': 0,
-            'created_at': format_timestamp(random_date_in_range(730)),
+            'created_at': format_timestamp(random_date_in_range(180)),
             'updated_at': format_timestamp(datetime.now()),
         }
         commodities.append(commodity)
@@ -600,7 +600,7 @@ def generate_orders_and_related(
         delivery_addr = random.choice(consumer_addrs)
         
         # Order timestamps
-        created_at = random_date_in_range(365)
+        created_at = random_date_in_range(90)
         order_status = weighted_choice(ENUMS['order_status'], [0.02, 0.05, 0.03, 0.10, 0.55, 0.20, 0.03, 0.02])
         
         # Generate order line items
@@ -724,10 +724,10 @@ def generate_orders_and_related(
                 }
                 transactions.append(transaction)
         
-        # Generate review (30% chance for delivered/done orders)
-        if order_status in ['delivered', 'done'] and random.random() < 0.3:
+        # Generate review (60% chance for delivered/done orders)
+        if order_status in ['delivered', 'done'] and random.random() < 0.6:
             for item in order_items:
-                if random.random() < 0.5:  # 50% of items get reviewed
+                if random.random() < 0.6:  # 60% of items get reviewed
                     rate = weighted_choice([1, 2, 3, 4, 5], [0.05, 0.05, 0.15, 0.35, 0.40])
                     
                     review = {

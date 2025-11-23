@@ -1,0 +1,5 @@
+flowchart TD
+    A['Generate Data'] --> B['S3 Bucket'] 
+    B --> C['Load Redshift'] 
+    C --> D['Query'] 
+    D -- Materialized views --> E['Analyze Results']

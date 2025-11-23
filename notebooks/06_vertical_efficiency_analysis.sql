@@ -14,8 +14,8 @@
 SELECT 
     COUNT(*) as total_verticals,
     COUNT(CASE WHEN status = 'active' THEN 1 END) as active_verticals,
-    COUNT(CASE WHEN level = 1 THEN 1 END) as top_level_categories,
-    COUNT(CASE WHEN level = 2 THEN 1 END) as subcategories
+    -- Hierarchy removed: parent/level columns no longer exist in schema
+    -- Removed top_level_categories and subcategories metrics
 FROM verticals;
 
 -- Expected output: Vertical hierarchy metrics
@@ -82,8 +82,6 @@ vertical_inventory AS (
 SELECT 
     v.id as vertical_id,
     v.name as vertical_name,
-    v.level as vertical_level,
-    COALESCE(pv.name, 'Top Level') as parent_vertical_name,
     v.status as vertical_status,
     
     -- Product metrics
@@ -158,7 +156,6 @@ SELECT
     RANK() OVER (ORDER BY COALESCE(vs.total_units_sold, 0) DESC) as volume_rank,
     RANK() OVER (ORDER BY COALESCE(vi.avg_product_rating, 0) DESC NULLS LAST) as quality_rank
 FROM verticals v
-LEFT JOIN verticals pv ON v.parent_id = pv.id
 LEFT JOIN vertical_sales vs ON v.id = vs.vertical_id
 LEFT JOIN vertical_sales_30d vs30 ON v.id = vs30.vertical_id
 LEFT JOIN vertical_inventory vi ON v.id = vi.vertical_id
@@ -188,7 +185,6 @@ SELECT
     TO_CHAR(o.created_at, 'YYYY-MM') as year_month,
     v.id as vertical_id,
     v.name as vertical_name,
-    v.level as vertical_level,
     
     -- Monthly metrics
     COUNT(DISTINCT oc.order_id) as total_orders,
@@ -207,7 +203,7 @@ JOIN commodities c ON oc.commodity_id = c.id
 JOIN verticals v ON c.vertical_id = v.id
 WHERE o.status IN ('delivered', 'done')
     AND v.status = 'active'
-GROUP BY 1, 2, 3, 4, 5
+GROUP BY 1, 2, 3, 4
 ORDER BY 1 DESC, 6 DESC;
 
 -- Expected output: ~468 rows (12 months × 39 verticals)
@@ -262,7 +258,7 @@ SELECT
     
     -- Cumulative market share
     ROUND(
-        (SUM(vm.total_revenue) OVER (ORDER BY vm.total_revenue DESC) 
+        (SUM(vm.total_revenue) OVER (ORDER BY vm.total_revenue DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
         / NULLIF(tm.overall_revenue, 0) * 100)::NUMERIC,
         2
     ) as cumulative_revenue_share_pct,
@@ -280,7 +276,7 @@ SELECT
     
     -- Concentration indicator (for 80/20 rule)
     CASE 
-        WHEN SUM(vm.total_revenue) OVER (ORDER BY vm.total_revenue DESC) 
+        WHEN SUM(vm.total_revenue) OVER (ORDER BY vm.total_revenue DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
             / NULLIF(tm.overall_revenue, 0) <= 0.80 
             THEN '🎯 Top 80% Revenue Generator'
         ELSE '📊 Long Tail Category'
