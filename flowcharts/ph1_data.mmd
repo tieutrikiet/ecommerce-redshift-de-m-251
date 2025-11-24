@@ -1,0 +1,13 @@
+---
+title: "Phase 1: Data Preparation"
+---
+
+flowchart TD
+    A[Start] --> B[Explore data exploitation demands]
+    B --> C[Design data schema]
+    C --> D[Scripting]
+    D --> E[Generate data]
+    E --> F{Is data satisfactory?}
+    F --> |Yes| G[End]
+    F --> |No| H[Refine schema and scripts]
+    H --> D
